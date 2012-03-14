@@ -23,10 +23,18 @@ function members360_auth_validate($form, &$form_state)
 {
 	$user = $form_state['values']['name'];
 	$pass = $form_state['values']['pass'];
-	$authenticated = members360_auth_authenticate($user, $pass);	
-	if(!$authenticated)
+	$status = members360_auth_authenticate($user, $pass);	
+	switch($status)	
 	{
-		form_set_error('name', t('Your membership information is invalid.'));
+		case 'UserLocked':
+			form_set_error('name', t('Your membership has expired. Please contact the CAJPA office.'));
+			break;
+			
+		case 'SessionOk':
+			break;
+			
+		default:
+			form_set_error('name', t('Invalid Login.'));
 	}
 }
 
@@ -57,12 +65,11 @@ function members360_auth_authenticate($user, $pass)
 	curl_setopt($ch, CURLOPT_POST, true);
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);	
 	$output = curl_exec($ch);
-	curl_close($ch);
-	if(preg_match('/M360AssociationId>'. ASSOCIATION_ID .'<\/M360AssociationId/', $output) && preg_match('/SessionStatus>(.*)<\/SessionStatus/', $output, $matches))
-	{
+	curl_close($ch);	
+	if(preg_match('/SessionStatus>(.*)<\/SessionStatus/', $output, $matches))
+	{	
 		$status = $matches[1];		
-		if($status == 'SessionOk')
-			return true;
+		return $status;		
 	}
 	return false;
 }
