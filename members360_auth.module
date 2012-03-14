@@ -1,0 +1,30 @@
+<?php
+
+/**
+ * Implements hook_form_alter()
+ **/
+function members360_auth_form_alter(&$form, &$form_state, $form_id)
+{
+	switch($form_id)
+	{
+		case 'user_login_block':
+		case 'user_login':
+			foreach($form['#submit'] as $key => $value)
+			{
+				if($value == 'user_login_submit')
+					$form['#submit'][$key] = 'members360_auth_user_login_submit';
+			}			
+			break;					
+	}
+}
+
+/**
+ * Replaces user login submit with authentication against Members360 SOAP login
+ **/
+function members360_auth_user_login_submit($form, &$form_state)
+{
+	echo '<pre>';
+	print_r($form_state);
+	echo '</pre>';
+	exit;
+}
