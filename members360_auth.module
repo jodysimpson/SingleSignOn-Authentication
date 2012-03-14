@@ -1,5 +1,7 @@
 <?php
 
+define('ASSOCIATION_ID', '3617083');
+
 /**
  * Implements hook_form_alter()
  **/
@@ -8,12 +10,8 @@ function members360_auth_form_alter(&$form, &$form_state, $form_id)
 	switch($form_id)
 	{
 		case 'user_login_block':
-		case 'user_login':
-			foreach($form['#submit'] as $key => $value)
-			{
-				if($value == 'user_login_submit')
-					$form['#submit'][$key] = 'members360_auth_user_login_submit';
-			}			
+		case 'user_login':	
+			$form['#validate'][] = 'members360_auth_validate';			
 			break;					
 	}
 }
@@ -21,10 +19,50 @@ function members360_auth_form_alter(&$form, &$form_state, $form_id)
 /**
  * Replaces user login submit with authentication against Members360 SOAP login
  **/
-function members360_auth_user_login_submit($form, &$form_state)
+function members360_auth_validate($form, &$form_state)
 {
-	echo '<pre>';
-	print_r($form_state);
-	echo '</pre>';
-	exit;
+	$user = $form_state['values']['name'];
+	$pass = $form_state['values']['pass'];
+	$authenticated = members360_auth_authenticate($user, $pass);	
+	if(!$authenticated)
+	{
+		form_set_error('name', t('Your membership information is invalid.'));
+	}
+}
+
+/**
+ * Send authentication information to Members360
+ **/
+function members360_auth_authenticate($user, $pass)
+{	
+	$fields = array(
+		'pAssociationId' => ASSOCIATION_ID,
+		'pUserName' => $user,
+		'pPassword' => $pass,
+		'pApplicationType' => 'Members360',
+	);
+	
+	$output = array();
+	foreach($fields as $key => $value)
+	{
+		$output[] = $key.'='.$value;
+	}
+	$fields = implode('&', $output);
+	
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_URL, 'https://sso.affiniscape.com/LoginService.asmx/AuthenticateUser');
+	curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE); 
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, FALSE); 
+	curl_setopt($ch, CURLOPT_POST, true);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);	
+	$output = curl_exec($ch);
+	curl_close($ch);
+	if(preg_match('/M360AssociationId>'. ASSOCIATION_ID .'<\/M360AssociationId/', $output) && preg_match('/M360MemberId>(\d+)<\/M360MemberId/', $output, $matches))
+	{
+		$memberID = $matches[1];		
+		if($memberID > 0)
+			return true;
+	}
+	return false;
 }
