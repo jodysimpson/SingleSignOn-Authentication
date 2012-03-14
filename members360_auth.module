@@ -11,7 +11,11 @@ function members360_auth_form_alter(&$form, &$form_state, $form_id)
 	{
 		case 'user_login_block':
 		case 'user_login':	
-			$form['#validate'][] = 'members360_auth_validate';			
+			foreach($form['#validate'] as $key => $value)
+			{
+				if($value == 'user_login_authenticate_validate')
+					$form['#validate'][$key] = 'members360_auth_validate';
+			}							
 			break;					
 	}
 }
@@ -31,6 +35,8 @@ function members360_auth_validate($form, &$form_state)
 			break;
 			
 		case 'SessionOk':
+			$account = user_load_by_name($user);
+			$form_state['uid'] = $account->uid;
 			break;
 			
 		default:
