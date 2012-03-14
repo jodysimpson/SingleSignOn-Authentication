@@ -58,10 +58,10 @@ function members360_auth_authenticate($user, $pass)
 	curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);	
 	$output = curl_exec($ch);
 	curl_close($ch);
-	if(preg_match('/M360AssociationId>'. ASSOCIATION_ID .'<\/M360AssociationId/', $output) && preg_match('/M360MemberId>(\d+)<\/M360MemberId/', $output, $matches))
+	if(preg_match('/M360AssociationId>'. ASSOCIATION_ID .'<\/M360AssociationId/', $output) && preg_match('/SessionStatus>(.*)<\/SessionStatus/', $output, $matches))
 	{
-		$memberID = $matches[1];		
-		if($memberID > 0)
+		$status = $matches[1];		
+		if($status == 'SessionOk')
 			return true;
 	}
 	return false;
