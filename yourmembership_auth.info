@@ -1,0 +1,10 @@
+name = YourMembership Authentication
+description = "Allows users to log into your site using YourMembership authentication"
+version = 1.x
+package = Other
+core = 7.x
+
+version = "7.x-1.0"
+core = "7.x"
+project = "yourmembership_auth"
+datestamp = "1414599614"

@@ -1,0 +1,43 @@
+<?php
+
+define('YOURMEMBERSHIP_AUTH_API_KEY', 'E926FE84-F635-4D55-A4F9-322166DEBD86');
+
+/**
+ * Implements hook_form_alter()
+ **/
+function yourmembership_auth_form_alter(&$form, &$form_state, $form_id) {
+	switch($form_id) {
+		case 'user_login_block':
+		case 'user_login':	
+			foreach($form['#validate'] as $key => $value) {
+				if($value == 'user_login_authenticate_validate')
+					$form['#validate'][$key] = 'yourmembership_auth_validate';
+			}							
+			break;					
+	}
+}
+
+/**
+ * Replaces user login submit with authentication against YourMembership Authentication Service
+ **/
+function yourmembership_auth_validate($form, &$form_state) {
+	$user = $form_state['values']['name'];
+	$pass = $form_state['values']['pass'];
+	require_once('YourMembership.php');
+	try {
+		$ym = new YourMembership(YOURMEMBERSHIP_AUTH_API_KEY);
+		if ($status = $ym->authenticate($user, $pass)) {
+			$account = user_load_by_name($user);
+			$form_state['uid'] = $account->uid;
+		} else {
+			form_set_error('name', t('Invalid Login.'));
+		}
+	} catch (YourMembershipException $e) {
+		watchdog('error', $e->getMessage());
+		form_set_error(null, 'There was a problem logging in.  
+			Please contact Justin Lewis <' . 
+			l('jlewis@cajpa.org', 'mailto:jlewis@cajpa.org', array('absolute' => TRUE)) . 
+			'>');
+	}
+}
+
