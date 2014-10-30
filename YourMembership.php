@@ -103,6 +103,47 @@ class YourMembership
     
         $this->sessionID = $this->getNodeValue($response, 'SessionID');
     }
+    
+    private function xmlToArray($root) {
+		$result = array();
+
+		if ($root->hasAttributes()) {
+			$attrs = $root->attributes;
+			foreach ($attrs as $attr) {
+				$result['@attributes'][$attr->name] = $attr->value;
+			}
+		}
+
+
+		if ($root->hasChildNodes()) {
+			$children = $root->childNodes;
+			if ($children->length == 1) {
+				$child = $children->item(0);
+				if ($child->nodeType == XML_TEXT_NODE) {
+					$result['_value'] = $child->nodeValue;
+					return count($result) == 1
+						? $result['_value']
+						: $result;
+				}
+			} elseif ($children->length > 1) {
+				$groups = array();
+				foreach ($children as $child) {
+					if (!isset($result[$child->nodeName])) {
+						$result[$child->nodeName] = $this->xmlToArray($child);
+					} else {
+						if (!isset($groups[$child->nodeName])) {
+							$result[$child->nodeName] = array($result[$child->nodeName]);
+							$groups[$child->nodeName] = 1;
+						}
+						$result[$child->nodeName][] = $this->xmlToArray($child);
+					}
+				}
+			}
+			return $result;
+		}
+
+		return null;
+	}
 
     public function authenticate($user, $pass) 
     {
@@ -110,6 +151,19 @@ class YourMembership
 
         return $this->getNodeValue($response, 'ID');
     }
+    
+    public function memberProfile($id) 
+    {
+    	$response = $this->request('Member.Profile.Get');
+    	$response = $response->getElementsByTagName('Member.Profile.Get');
+    	if ($response->length != 1) {
+    		return false;
+    	} 
+    	$response = $response->item(0);
+    	$profile = $this->xmlToArray($response);
+    	return $profile;
+    }
+    
 }
 
 class YourMembershipException extends Exception 

@@ -26,9 +26,22 @@ function yourmembership_auth_validate($form, &$form_state) {
 	require_once('YourMembership.php');
 	try {
 		$ym = new YourMembership(YOURMEMBERSHIP_AUTH_API_KEY);
-		if ($status = $ym->authenticate($user, $pass)) {
+		if ($member_id = $ym->authenticate($user, $pass)) {
 			$account = user_load_by_name($user);
-			$form_state['uid'] = $account->uid;
+			if (!$account) {	
+				$profile = $ym->memberProfile($status);
+				$new_user = array(
+			    	'name' => $user,
+					'pass' => user_password(),
+			    	'mail' => $profile['EmailAddr'],
+					'init' => $profile['EmailAddr'],
+			 	    'status' => 1,
+			        'access' => REQUEST_TIME,
+			        'roles' => array('member'),
+			    );
+				$account = user_save(null, $new_user);
+			}
+			$form_state['uid'] = $account->uid;			
 		} else {
 			form_set_error('name', t('Invalid Login.'));
 		}
